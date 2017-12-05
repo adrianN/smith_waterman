@@ -10,7 +10,7 @@ mod path_match {
 
     impl TableEntry {
         fn new() -> TableEntry {
-            TableEntry { score: 0 }
+            TableEntry { score: -100 }
         }
 
         fn get_score(&self) -> isize {
@@ -25,24 +25,28 @@ mod path_match {
 
     impl Table {
         fn new(text_len: usize) -> Table {
-            Table {
+            let mut t = Table {
                 data: vec![TableEntry::new(); 1 * (1 + text_len)],
                 text_len: text_len,
+            };
+            for i in 0..t.data.len() {
+                t.data[i].score = -(i as isize);
             }
+            t
         }
 
         fn get<'a>(&'a self, p: usize, t: usize) -> &'a TableEntry {
-            println!("Get {} {}", p, t);
+            println!("Get {} {} -> {}", p, t, self.data[t + p * self.text_len].get_score());
             &self.data[t + p * self.text_len]
         }
 
         fn get_mut<'a>(&'a mut self, p: usize, t: usize) -> &'a mut TableEntry {
-            println!("Get mut {} {}", p, t);
+            println!("Get {} {} -> {}", p, t, self.data[t + p * self.text_len].get_score());
             &mut self.data[t + p * self.text_len]
         }
 
         fn add_row(&mut self) {
-            for i in 0..self.text_len {
+            for _i in 0..self.text_len {
                 self.data.push(TableEntry::new());
             }
         }
@@ -73,19 +77,21 @@ mod path_match {
                 let pattern_skip = (1..self.pattern_length + 1)
                     .map(|x| self.table.get(self.pattern_length - x, i).get_score() - x as isize)
                     .max()
-                    .unwrap_or(-1);
+                    .unwrap_or(-10000);
                 println!("ps {}", pattern_skip);
                 let text_skip = (1..i)
                     .map(|x| {
-                        self.table.get(self.pattern_length - 1, i - x).get_score() - x as isize
+                        self.table.get(self.pattern_length , i - x).get_score() - x as isize
                     })
                     .max()
-                    .unwrap_or(-1);
+                    .unwrap_or(-10000);
                 println!("ts {}", text_skip);
                 let matching = if k == *b {
+                    println!("match");
                     self.table.get(self.pattern_length - 1, i - 1).get_score()
+
                 } else {
-                    -1
+                    -10000
                 };
                 self.table.get_mut(self.pattern_length, i).score =
                     max(max(pattern_skip, text_skip), matching);
@@ -108,13 +114,32 @@ mod tests {
     #[test]
     fn it_works() {
         let m = path_match::Matcher::new("aoeu");
-        assert!(m.score() == 0);
+        println!("score {}", m.score());
+        assert!(m.score() == -4);
     }
 
     #[test]
     fn matching() {
-        let mut m = path_match::Matcher::new("aoeu");
-        m.add_pchar('a' as u8);
-        assert!(m.score() == 2);
+        let bts = "aoeu".as_bytes();
+        for b in bts {
+            let mut m = path_match::Matcher::new("aoeu");
+            m.add_pchar(*b);
+            println!("score {}", m.score());
+            assert!(m.score() == -3);
+        }
+    }
+
+    #[test]
+    fn matching2chars() {
+        let bts = "aoeu".as_bytes();
+        for i in 0..bts.len() {
+            for j in i+1..bts.len() {
+                let mut m = path_match::Matcher::new("aoeu");
+                m.add_pchar(bts[i]);
+                m.add_pchar(bts[j]);
+                println!("score {}",m.score());
+                assert!(m.score() == -2);
+            }
+        }
     }
 }
