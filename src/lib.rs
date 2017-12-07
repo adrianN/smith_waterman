@@ -8,6 +8,7 @@ mod path_match {
         streak: isize,
         gaps: isize,
         pattern_skip: isize,
+        word_boundary: isize,
     }
 
     impl TableEntry {
@@ -17,6 +18,7 @@ mod path_match {
                 streak: 0,
                 gaps: 0,
                 pattern_skip: 0,
+                word_boundary: 0,
             }
         }
 
@@ -24,17 +26,14 @@ mod path_match {
             TableEntry {
                 match_score: self.match_score + self.streak + 1,
                 streak: self.streak + 1,
-                gaps: self.gaps,
-                pattern_skip: self.pattern_skip,
+                ..*self
             }
         }
 
         fn skip_pattern(&self) -> TableEntry {
             TableEntry {
-                match_score: self.match_score,
-                streak: self.streak,
-                gaps: self.gaps,
                 pattern_skip: self.pattern_skip + 1,
+                ..*self
             }
         }
 
@@ -43,16 +42,23 @@ mod path_match {
                 self.clone()
             } else {
                 TableEntry {
-                    match_score: self.match_score,
                     streak: 0,
                     gaps: self.gaps + 1,
-                    pattern_skip: self.pattern_skip,
+                    ..*self
                 }
+            }
+        }
+
+        fn boundary_match(&self) -> TableEntry {
+            TableEntry {
+                word_boundary: self.word_boundary + 1,
+                ..*self
             }
         }
 
         fn get_score(&self) -> isize {
             -5 * self.gaps + (-1) * 10 * self.pattern_skip + self.match_score
+                + self.word_boundary * 3
         }
     }
 
@@ -119,6 +125,7 @@ mod path_match {
         pub fn add_pchar(&mut self, k: u8) {
             self.pattern_length += 1;
             self.table.add_row();
+            let mut last_b: Option<&u8> = None;
             for (i, b) in self.text.as_bytes().into_iter().enumerate() {
                 let i = i + 1;
                 println!("i {} b {}", i, *b as char);
@@ -131,7 +138,18 @@ mod path_match {
                     .max_by_key(|x| x.get_score());
                 println!("ts {:?}", text_skip);
                 let matching = if k == *b {
-                    Some(self.table.get(self.pattern_length - 1, i - 1).match_key())
+                    let m = self.table.get(self.pattern_length - 1, i - 1).match_key();
+                    let boundaries = "-_\\/ ".as_bytes();
+                    match last_b {
+                        Some(x) => {
+                            if boundaries.into_iter().any(|y| *x == *y) {
+                                Some(m.boundary_match())
+                            } else {
+                                Some(m)
+                            }
+                        }
+                        _ => Some(m),
+                    }
                 } else {
                     None
                 };
@@ -144,6 +162,7 @@ mod path_match {
                     .unwrap();
                 println!("\x1b[31;1;4mstoring \x1b[0m{:?}", r);
                 *self.table.get_mut(self.pattern_length, i) = r;
+                last_b = Some(b);
             }
         }
 
@@ -230,5 +249,12 @@ mod tests {
             m.add_pchar(*x);
         }
         assert_eq!(m.score(), -5 + 10);
+    }
+
+    #[test]
+    fn word_boundary() {
+        let mut m = path_match::Matcher::new("ht ao");
+        m.add_pchar('a' as u8);
+        assert_eq!(m.score(), -5 + 3 + 1 - 5);
     }
 }
