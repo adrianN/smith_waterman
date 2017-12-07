@@ -222,4 +222,13 @@ mod tests {
         println!("score {}", m.score());
         assert_eq!(m.score(), -15);
     }
+
+    #[test]
+    fn not_greedy() {
+        let mut m = path_match::Matcher::new("aoehtnaoeu");
+        for x in "aoeu".as_bytes() {
+            m.add_pchar(*x);
+        }
+        assert_eq!(m.score(), -5 + 10);
+    }
 }
