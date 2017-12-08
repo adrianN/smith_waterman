@@ -173,8 +173,10 @@ impl<'a> Matcher<'a> {
     }
 
     pub fn remove_pchar(&mut self) {
-        self.pattern_length -= 1;
-        self.table.pop_row();
+        if self.pattern_length > 0 {
+            self.pattern_length -= 1;
+            self.table.pop_row();
+        }
     }
 
     pub fn score(&self) -> isize {
