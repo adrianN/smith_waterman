@@ -14,6 +14,7 @@ pub struct MatcherWeights {
     pub pattern_skip_penalty: isize,
     pub first_letter_bonus: isize,
 }
+const BOUNDARIES : [u8; 5]=[45, 95, 92, 47, 32];
 
 impl MatcherWeights {
     pub fn new() -> MatcherWeights {
@@ -141,10 +142,9 @@ impl<'a> Matcher<'a> {
                 .max_by_key(|x| x.get_score(&self.weights));
             let matching = if k == *b {
                 let m = self.table.get(self.pattern_length - 1, i - 1).match_key();
-                let boundaries = "-_\\/ ".as_bytes();
                 match last_b {
                     Some(x) => {
-                        if boundaries.into_iter().any(|y| *x == *y) {
+                        if BOUNDARIES.into_iter().any(|y| *x == *y) {
                             Some(m.boundary_match())
                         } else {
                             Some(m)
