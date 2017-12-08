@@ -84,3 +84,14 @@ fn word_boundary() {
     assert_eq!(m.score(), -5 + 3 + 1 - 5);
 }
 
+#[test]
+fn remove_char() {
+    let mut m = path_match::Matcher::from("aoeu", default_weights());
+    m.add_pchar('a' as u8);
+    m.add_pchar('e' as u8);
+    assert_eq!(m.score(), 1 + -5 + 1 + -5);
+    m.remove_pchar();
+    assert_eq!(m.score(), 1 + -5);
+    m.add_pchar('o' as u8);
+    assert_eq!(m.score(), 3+-5);
+}
