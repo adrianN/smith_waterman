@@ -10,17 +10,17 @@ struct TableEntry {
 }
 
 pub struct MatcherWeights {
-    gap_penalty : isize,
-    pattern_skip_penalty : isize,
-    first_letter_bonus :isize,
+    pub gap_penalty: isize,
+    pub pattern_skip_penalty: isize,
+    pub first_letter_bonus: isize,
 }
 
 impl MatcherWeights {
     pub fn new() -> MatcherWeights {
         MatcherWeights {
-            gap_penalty : -5,
-            pattern_skip_penalty : -10,
-            first_letter_bonus : 3
+            gap_penalty: -5,
+            pattern_skip_penalty: -10,
+            first_letter_bonus: 3,
         }
     }
 }
@@ -70,9 +70,9 @@ impl TableEntry {
         }
     }
 
-    fn get_score(&self, w : &MatcherWeights) -> isize {
+    fn get_score(&self, w: &MatcherWeights) -> isize {
         w.gap_penalty * self.gaps + w.pattern_skip_penalty * self.pattern_skip + self.match_score
-            + w.first_letter_bonus * self.word_boundary 
+            + w.first_letter_bonus * self.word_boundary
     }
 }
 
@@ -113,7 +113,7 @@ pub struct Matcher<'a> {
     text: &'a str,
     pattern_length: usize,
     table: Table,
-    weights : MatcherWeights,
+    weights: MatcherWeights,
 }
 
 impl<'a> Matcher<'a> {
@@ -121,12 +121,12 @@ impl<'a> Matcher<'a> {
         Matcher::from(text, MatcherWeights::new())
     }
 
-    pub fn from(text : &'a str, weights : MatcherWeights) -> Matcher<'a> {
+    pub fn from(text: &'a str, weights: MatcherWeights) -> Matcher<'a> {
         Matcher {
             text: text,
             pattern_length: 0,
             table: Table::new(text.len()),
-            weights : weights
+            weights: weights,
         }
     }
 

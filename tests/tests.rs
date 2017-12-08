@@ -1,7 +1,15 @@
 extern crate path_match;
+fn default_weights() -> path_match::MatcherWeights {
+    path_match::MatcherWeights {
+        gap_penalty : -5,
+        pattern_skip_penalty : -10,
+        first_letter_bonus : 3
+    }
+}
+
 #[test]
 fn it_works() {
-    let m = path_match::Matcher::new("aoeu");
+    let m = path_match::Matcher::from("aoeu", default_weights());
     assert_eq!(m.score(), -5);
 }
 
@@ -10,7 +18,7 @@ fn matching() {
     let bts = "aoeu".as_bytes();
     for (i, b) in bts.into_iter().enumerate() {
         println!("===");
-        let mut m = path_match::Matcher::new("aoeu");
+        let mut m = path_match::Matcher::from("aoeu", default_weights());
         m.add_pchar(*b);
         if i == 0 || i == 3 {
             assert_eq!(m.score(), -5 + 1);
@@ -30,7 +38,7 @@ fn matching2chars() {
             let third_skip = if j < 3 { 1 } else { 0 };
             let match_bonus = if (j - i) == 1 { 1 } else { 0 };
 
-            let mut m = path_match::Matcher::new("aoeu");
+            let mut m = path_match::Matcher::from("aoeu", default_weights());
             println!("*** add {}", bts[i] as char);
             m.add_pchar(bts[i]);
             println!("add {}", bts[j] as char);
@@ -54,7 +62,7 @@ fn matching2chars() {
 
 #[test]
 fn not_matching() {
-    let mut m = path_match::Matcher::new("aoeu");
+    let mut m = path_match::Matcher::from("aoeu", default_weights());
     m.add_pchar('x' as u8);
     println!("score {}", m.score());
     assert_eq!(m.score(), -15);
@@ -62,7 +70,7 @@ fn not_matching() {
 
 #[test]
 fn not_greedy() {
-    let mut m = path_match::Matcher::new("aoehtnaoeu");
+    let mut m = path_match::Matcher::from("aoehtnaoeu", default_weights());
     for x in "aoeu".as_bytes() {
         m.add_pchar(*x);
     }
@@ -71,7 +79,7 @@ fn not_greedy() {
 
 #[test]
 fn word_boundary() {
-    let mut m = path_match::Matcher::new("ht ao");
+    let mut m = path_match::Matcher::from("ht ao", default_weights());
     m.add_pchar('a' as u8);
     assert_eq!(m.score(), -5 + 3 + 1 - 5);
 }
