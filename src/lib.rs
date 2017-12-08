@@ -102,6 +102,12 @@ impl Table {
         self.data.reserve(self.text_len);
     }
 
+    fn pop_row(&mut self) {
+        for _ in 0..self.text_len {
+            self.data.pop();
+        }
+    }
+
     fn add(&mut self, entry : TableEntry) {
         self.data.push(entry);
     }
@@ -168,6 +174,7 @@ impl<'a> Matcher<'a> {
 
     pub fn remove_pchar(&mut self) {
         self.pattern_length -= 1;
+        self.table.pop_row();
     }
 
     pub fn score(&self) -> isize {
