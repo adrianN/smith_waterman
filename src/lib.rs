@@ -97,17 +97,14 @@ impl Table {
         &self.data[t + p * self.text_len]
     }
 
-    fn get_mut<'a>(&'a mut self, p: usize, t: usize) -> &'a mut TableEntry {
-        &mut self.data[t + p * self.text_len]
+    fn ensure_row(&mut self) {
+        self.data.reserve(self.text_len);
     }
 
-    fn add_row(&mut self) {
-        for _i in 0..self.text_len {
-            self.data.push(TableEntry::new());
-        }
+    fn add(&mut self, entry : TableEntry) {
+        self.data.push(entry);
     }
 }
-
 
 pub struct Matcher<'a> {
     text: &'a str,
@@ -132,8 +129,8 @@ impl<'a> Matcher<'a> {
 
     pub fn add_pchar(&mut self, k: u8) {
         self.pattern_length += 1;
-        self.table.add_row();
         let mut last_b: Option<&u8> = None;
+        self.table.ensure_row();
         for (i, b) in self.text.as_bytes().into_iter().enumerate() {
             let i = i + 1;
             let pattern_skip = (1..self.pattern_length + 1)
@@ -164,7 +161,7 @@ impl<'a> Matcher<'a> {
                 .chain(matching)
                 .max_by_key(|x| x.get_score(&self.weights))
                 .unwrap();
-            *self.table.get_mut(self.pattern_length, i) = r;
+            self.table.add(r);
             last_b = Some(b);
         }
     }
@@ -178,4 +175,4 @@ impl<'a> Matcher<'a> {
             .get(self.pattern_length, self.text.len())
             .get_score(&self.weights)
     }
-i
+}
