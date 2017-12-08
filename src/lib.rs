@@ -136,15 +136,12 @@ impl<'a> Matcher<'a> {
         let mut last_b: Option<&u8> = None;
         for (i, b) in self.text.as_bytes().into_iter().enumerate() {
             let i = i + 1;
-            println!("i {} b {}", i, *b as char);
             let pattern_skip = (1..self.pattern_length + 1)
                 .map(|x| self.table.get(self.pattern_length - x, i).skip_pattern())
                 .max_by_key(|x| x.get_score(&self.weights));
-            println!("ps {:?}", pattern_skip);
             let text_skip = (1..i)
                 .map(|x| self.table.get(self.pattern_length, i - x).skip_text())
                 .max_by_key(|x| x.get_score(&self.weights));
-            println!("ts {:?}", text_skip);
             let matching = if k == *b {
                 let m = self.table.get(self.pattern_length - 1, i - 1).match_key();
                 let boundaries = "-_\\/ ".as_bytes();
@@ -161,14 +158,12 @@ impl<'a> Matcher<'a> {
             } else {
                 None
             };
-            println!("match {:?}", matching);
             let r: TableEntry = pattern_skip
                 .into_iter()
                 .chain(text_skip)
                 .chain(matching)
                 .max_by_key(|x| x.get_score(&self.weights))
                 .unwrap();
-            println!("\x1b[31;1;4mstoring \x1b[0m{:?}", r);
             *self.table.get_mut(self.pattern_length, i) = r;
             last_b = Some(b);
         }
@@ -183,4 +178,4 @@ impl<'a> Matcher<'a> {
             .get(self.pattern_length, self.text.len())
             .get_score(&self.weights)
     }
-}
+i
