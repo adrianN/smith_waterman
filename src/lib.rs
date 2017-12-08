@@ -9,6 +9,22 @@ struct TableEntry {
     word_boundary: isize,
 }
 
+pub struct MatcherWeights {
+    gap_penalty : isize,
+    pattern_skip_penalty : isize,
+    first_letter_bonus :isize,
+}
+
+impl MatcherWeights {
+    pub fn new() -> MatcherWeights {
+        MatcherWeights {
+            gap_penalty : -5,
+            pattern_skip_penalty : -10,
+            first_letter_bonus : 3
+        }
+    }
+}
+
 impl TableEntry {
     fn new() -> TableEntry {
         TableEntry {
@@ -54,9 +70,9 @@ impl TableEntry {
         }
     }
 
-    fn get_score(&self) -> isize {
-        -5 * self.gaps + (-1) * 10 * self.pattern_skip + self.match_score
-            + self.word_boundary * 3
+    fn get_score(&self, w : &MatcherWeights) -> isize {
+        w.gap_penalty * self.gaps + w.pattern_skip_penalty * self.pattern_skip + self.match_score
+            + w.first_letter_bonus * self.word_boundary 
     }
 }
 
@@ -78,22 +94,10 @@ impl Table {
     }
 
     fn get<'a>(&'a self, p: usize, t: usize) -> &'a TableEntry {
-        println!(
-            "Get {} {} -> {}",
-            p,
-            t,
-            self.data[t + p * self.text_len].get_score()
-        );
         &self.data[t + p * self.text_len]
     }
 
     fn get_mut<'a>(&'a mut self, p: usize, t: usize) -> &'a mut TableEntry {
-        println!(
-            "Get {} {} -> {}",
-            p,
-            t,
-            self.data[t + p * self.text_len].get_score()
-        );
         &mut self.data[t + p * self.text_len]
     }
 
@@ -109,14 +113,20 @@ pub struct Matcher<'a> {
     text: &'a str,
     pattern_length: usize,
     table: Table,
+    weights : MatcherWeights,
 }
 
 impl<'a> Matcher<'a> {
     pub fn new(text: &'a str) -> Matcher<'a> {
+        Matcher::from(text, MatcherWeights::new())
+    }
+
+    pub fn from(text : &'a str, weights : MatcherWeights) -> Matcher<'a> {
         Matcher {
             text: text,
             pattern_length: 0,
             table: Table::new(text.len()),
+            weights : weights
         }
     }
 
@@ -129,11 +139,11 @@ impl<'a> Matcher<'a> {
             println!("i {} b {}", i, *b as char);
             let pattern_skip = (1..self.pattern_length + 1)
                 .map(|x| self.table.get(self.pattern_length - x, i).skip_pattern())
-                .max_by_key(|x| x.get_score());
+                .max_by_key(|x| x.get_score(&self.weights));
             println!("ps {:?}", pattern_skip);
             let text_skip = (1..i)
                 .map(|x| self.table.get(self.pattern_length, i - x).skip_text())
-                .max_by_key(|x| x.get_score());
+                .max_by_key(|x| x.get_score(&self.weights));
             println!("ts {:?}", text_skip);
             let matching = if k == *b {
                 let m = self.table.get(self.pattern_length - 1, i - 1).match_key();
@@ -156,7 +166,7 @@ impl<'a> Matcher<'a> {
                 .into_iter()
                 .chain(text_skip)
                 .chain(matching)
-                .max_by_key(|x| x.get_score())
+                .max_by_key(|x| x.get_score(&self.weights))
                 .unwrap();
             println!("\x1b[31;1;4mstoring \x1b[0m{:?}", r);
             *self.table.get_mut(self.pattern_length, i) = r;
@@ -171,6 +181,6 @@ impl<'a> Matcher<'a> {
     pub fn score(&self) -> isize {
         self.table
             .get(self.pattern_length, self.text.len())
-            .get_score()
+            .get_score(&self.weights)
     }
 }
