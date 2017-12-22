@@ -1,26 +1,31 @@
 #![allow(dead_code)]
+extern crate rand;
 
 #[derive(Clone, Copy, Debug)]
 struct TableEntry {
-    match_score: isize,
+    match_count: isize,
     streak: isize,
     gaps: isize,
+    //todo text_skip
     pattern_skip: isize,
     word_boundary: isize,
+    id: u16,
 }
 
 pub struct MatcherWeights {
     pub gap_penalty: isize,
     pub pattern_skip_penalty: isize,
+    pub match_bonus: isize,
     pub first_letter_bonus: isize,
 }
-const BOUNDARIES : [u8; 5]=[45, 95, 92, 47, 32];
+const BOUNDARIES: [u8; 5] = [45, 95, 92, 47, 32];
 
 impl MatcherWeights {
     pub fn new() -> MatcherWeights {
         MatcherWeights {
             gap_penalty: -5,
             pattern_skip_penalty: -10,
+            match_bonus: 1,
             first_letter_bonus: 3,
         }
     }
@@ -28,52 +33,58 @@ impl MatcherWeights {
 
 impl TableEntry {
     fn new() -> TableEntry {
+        let id = rand::random::<u16>();
+        println!("() <- {}", id);
         TableEntry {
-            match_score: 0,
+            match_count: 0,
             streak: 0,
             gaps: 0,
             pattern_skip: 0,
             word_boundary: 0,
+            id: id,
         }
     }
 
-    fn match_key(&self) -> TableEntry {
+    fn match_key(&self, boundary_match: bool) -> TableEntry {
+        let id = rand::random::<u16>();
+        println!("{} <- {} m", self.id, id);
         TableEntry {
-            match_score: self.match_score + self.streak + 1,
+            match_count: self.match_count + 1,
             streak: self.streak + 1,
+            word_boundary: self.word_boundary + if boundary_match { 1 } else { 0 },
+            id: id,
             ..*self
         }
     }
 
     fn skip_pattern(&self) -> TableEntry {
+        let id = rand::random::<u16>();
+        println!("{} <- {} sp", self.id, id);
         TableEntry {
             pattern_skip: self.pattern_skip + 1,
+            id: id,
             ..*self
         }
     }
 
     fn skip_text(&self) -> TableEntry {
-        if self.streak == 0 {
-            self.clone()
-        } else {
-            TableEntry {
-                streak: 0,
-                gaps: self.gaps + 1,
-                ..*self
-            }
-        }
-    }
-
-    fn boundary_match(&self) -> TableEntry {
+        let id = rand::random::<u16>();
+        println!("{} <- {} st", self.id, id);
         TableEntry {
-            word_boundary: self.word_boundary + 1,
+            streak: 0,
+            gaps: self.gaps + if self.streak != 0 { 1 } else { 0 },
+            id: id,
             ..*self
         }
     }
 
-    fn get_score(&self, w: &MatcherWeights) -> isize {
-        w.gap_penalty * self.gaps + w.pattern_skip_penalty * self.pattern_skip + self.match_score
-            + w.first_letter_bonus * self.word_boundary
+    fn get_score(&self, w: &MatcherWeights) -> (isize, isize) {
+        (
+            w.gap_penalty * self.gaps + w.pattern_skip_penalty * self.pattern_skip
+                + w.match_bonus * self.match_count
+                + w.first_letter_bonus * self.word_boundary,
+            self.streak,
+        )
     }
 }
 
@@ -84,14 +95,10 @@ struct Table {
 
 impl Table {
     fn new(text_len: usize) -> Table {
-        let mut t = Table {
+        Table {
             data: vec![TableEntry::new(); 1 * (1 + text_len)],
             text_len: text_len,
-        };
-        for i in 1..t.data.len() {
-            t.data[i].gaps = 1;
         }
-        t
     }
 
     fn get<'a>(&'a self, p: usize, t: usize) -> &'a TableEntry {
@@ -108,7 +115,7 @@ impl Table {
         }
     }
 
-    fn add(&mut self, entry : TableEntry) {
+    fn add(&mut self, entry: TableEntry) {
         self.data.push(entry);
     }
 }
@@ -139,6 +146,7 @@ impl<'a> Matcher<'a> {
         let mut last_b: Option<&u8> = None;
         self.table.ensure_row();
         for (i, b) in self.text.as_bytes().into_iter().enumerate() {
+            println!("{} {}", k as char, &self.text[0..i + 1]);
             let i = i + 1;
             let pattern_skip = (1..self.pattern_length + 1)
                 .map(|x| self.table.get(self.pattern_length - x, i).skip_pattern())
@@ -147,17 +155,21 @@ impl<'a> Matcher<'a> {
                 .map(|x| self.table.get(self.pattern_length, i - x).skip_text())
                 .max_by_key(|x| x.get_score(&self.weights));
             let matching = if k == *b {
-                let m = self.table.get(self.pattern_length - 1, i - 1).match_key();
-                match last_b {
-                    Some(x) => {
-                        if BOUNDARIES.into_iter().any(|y| *x == *y) {
-                            Some(m.boundary_match())
-                        } else {
-                            Some(m)
-                        }
-                    }
-                    _ => Some(m),
-                }
+                let boundary_match = i == self.text.len() || match last_b {
+                    Some(x) => BOUNDARIES.into_iter().any(|y| *x == *y),
+                    None => true,
+                };
+                let te = self.table
+                    .get(self.pattern_length - 1, i - 1)
+                    .match_key(boundary_match);
+                println!(
+                    "{} {} {:?} {:?}",
+                    k as char,
+                    i,
+                    te,
+                    te.get_score(&self.weights)
+                );
+                Some(te)
             } else {
                 None
             };
@@ -165,8 +177,18 @@ impl<'a> Matcher<'a> {
                 .into_iter()
                 .chain(text_skip)
                 .chain(matching)
-                .max_by_key(|x| x.get_score(&self.weights))
+                .max_by_key(|x| {
+                    println!("> {:?}", x.get_score(&self.weights));
+                    x.get_score(&self.weights)
+                })
                 .unwrap();
+            println!(
+                "add i {} p {} {:?} {:?}",
+                i,
+                self.pattern_length,
+                r,
+                r.get_score(&self.weights)
+            );
             self.table.add(r);
             last_b = Some(b);
         }
@@ -180,8 +202,13 @@ impl<'a> Matcher<'a> {
     }
 
     pub fn score(&self) -> isize {
-        self.table
-            .get(self.pattern_length, self.text.len())
-            .get_score(&self.weights)
+        let mut te = TableEntry {
+            ..*self.table.get(self.pattern_length, self.text.len())
+        };
+        // the gap at the end shouldn't count
+        if te.streak == 0 && te.gaps > 0 {
+            te.gaps -= 1;
+        }
+        te.get_score(&self.weights).0
     }
 }
