@@ -6,7 +6,6 @@ struct TableEntry {
     match_count: isize,
     streak: isize,
     gaps: isize,
-    //todo text_skip
     pattern_skip: isize,
     word_boundary: isize,
     id: u16,
@@ -148,12 +147,12 @@ impl<'a> Matcher<'a> {
         for (i, b) in self.text.as_bytes().into_iter().enumerate() {
             println!("{} {}", k as char, &self.text[0..i + 1]);
             let i = i + 1;
-            let pattern_skip = (1..self.pattern_length + 1)
-                .map(|x| self.table.get(self.pattern_length - x, i).skip_pattern())
-                .max_by_key(|x| x.get_score(&self.weights));
-            let text_skip = (1..i)
-                .map(|x| self.table.get(self.pattern_length, i - x).skip_text())
-                .max_by_key(|x| x.get_score(&self.weights));
+            let pattern_skip = Some(self.table.get(self.pattern_length - 1, i).skip_pattern());
+            let text_skip = if i >= 2 {
+                Some(self.table.get(self.pattern_length, i - 1).skip_text())
+            } else {
+                None
+            };
             let matching = if k == *b {
                 let boundary_match = i == self.text.len() || match last_b {
                     Some(x) => BOUNDARIES.into_iter().any(|y| *x == *y),
