@@ -8,7 +8,6 @@ struct TableEntry {
     gaps: isize,
     pattern_skip: isize,
     word_boundary: isize,
-    id: u16,
 }
 
 pub struct MatcherWeights {
@@ -32,47 +31,35 @@ impl MatcherWeights {
 
 impl TableEntry {
     fn new() -> TableEntry {
-        let id = rand::random::<u16>();
-        println!("() <- {}", id);
         TableEntry {
             match_count: 0,
             streak: 0,
             gaps: 0,
             pattern_skip: 0,
             word_boundary: 0,
-            id: id,
         }
     }
 
     fn match_key(&self, boundary_match: bool) -> TableEntry {
-        let id = rand::random::<u16>();
-        println!("{} <- {} m", self.id, id);
         TableEntry {
             match_count: self.match_count + 1,
             streak: self.streak + 1,
             word_boundary: self.word_boundary + if boundary_match { 1 } else { 0 },
-            id: id,
             ..*self
         }
     }
 
     fn skip_pattern(&self) -> TableEntry {
-        let id = rand::random::<u16>();
-        println!("{} <- {} sp", self.id, id);
         TableEntry {
             pattern_skip: self.pattern_skip + 1,
-            id: id,
             ..*self
         }
     }
 
     fn skip_text(&self) -> TableEntry {
-        let id = rand::random::<u16>();
-        println!("{} <- {} st", self.id, id);
         TableEntry {
             streak: 0,
             gaps: self.gaps + if self.streak != 0 { 1 } else { 0 },
-            id: id,
             ..*self
         }
     }
@@ -145,7 +132,6 @@ impl<'a> Matcher<'a> {
         let mut last_b: Option<&u8> = None;
         self.table.ensure_row();
         for (i, b) in self.text.as_bytes().into_iter().enumerate() {
-            println!("{} {}", k as char, &self.text[0..i + 1]);
             let i = i + 1;
             let pattern_skip = Some(self.table.get(self.pattern_length - 1, i).skip_pattern());
             let text_skip = if i >= 2 {
@@ -158,17 +144,11 @@ impl<'a> Matcher<'a> {
                     Some(x) => BOUNDARIES.into_iter().any(|y| *x == *y),
                     None => true,
                 };
-                let te = self.table
-                    .get(self.pattern_length - 1, i - 1)
-                    .match_key(boundary_match);
-                println!(
-                    "{} {} {:?} {:?}",
-                    k as char,
-                    i,
-                    te,
-                    te.get_score(&self.weights)
-                );
-                Some(te)
+                Some(
+                    self.table
+                        .get(self.pattern_length - 1, i - 1)
+                        .match_key(boundary_match),
+                )
             } else {
                 None
             };
@@ -176,18 +156,8 @@ impl<'a> Matcher<'a> {
                 .into_iter()
                 .chain(text_skip)
                 .chain(matching)
-                .max_by_key(|x| {
-                    println!("> {:?}", x.get_score(&self.weights));
-                    x.get_score(&self.weights)
-                })
+                .max_by_key(|x| x.get_score(&self.weights))
                 .unwrap();
-            println!(
-                "add i {} p {} {:?} {:?}",
-                i,
-                self.pattern_length,
-                r,
-                r.get_score(&self.weights)
-            );
             self.table.add(r);
             last_b = Some(b);
         }
