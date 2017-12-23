@@ -1,6 +1,6 @@
-extern crate path_match;
-fn default_weights() -> path_match::MatcherWeights {
-    path_match::MatcherWeights {
+extern crate smith_waterman;
+fn default_weights() -> smith_waterman::MatcherWeights {
+    smith_waterman::MatcherWeights {
         gap_penalty : -5,
         pattern_skip_penalty : -10,
         first_letter_bonus : 3,
@@ -10,7 +10,7 @@ fn default_weights() -> path_match::MatcherWeights {
 
 #[test]
 fn it_works() {
-    let m = path_match::Matcher::from("aoeu", default_weights());
+    let m = smith_waterman::Matcher::from("aoeu", default_weights());
     assert_eq!(m.score(), 0);
 }
 
@@ -19,7 +19,7 @@ fn matching() {
     let bts = "aoeu".as_bytes();
     for (i, b) in bts.into_iter().enumerate() {
         println!("=== {}", *b as char);
-        let mut m = path_match::Matcher::from("aoeu", default_weights());
+        let mut m = smith_waterman::Matcher::from("aoeu", default_weights());
         m.add_pchar(*b);
         if i == 0  {
             assert_eq!(m.score(), 1 + 3);
@@ -41,7 +41,7 @@ fn matching2chars() {
             let start = if i==0 { 3 } else {0 };
             let end = if j==3 { 3 } else {0 };
 
-            let mut m = path_match::Matcher::from("aoeu", default_weights());
+            let mut m = smith_waterman::Matcher::from("aoeu", default_weights());
             println!("*** add {}", bts[i] as char);
             m.add_pchar(bts[i]);
             println!("add {}", bts[j] as char);
@@ -64,7 +64,7 @@ fn matching2chars() {
 
 #[test]
 fn not_matching() {
-    let mut m = path_match::Matcher::from("aoeu", default_weights());
+    let mut m = smith_waterman::Matcher::from("aoeu", default_weights());
     m.add_pchar('x' as u8);
     println!("score {}", m.score());
     assert_eq!(m.score(), -10);
@@ -72,13 +72,13 @@ fn not_matching() {
 
 #[test]
 fn not_greedy() {
-    let weights = path_match::MatcherWeights {
+    let weights = smith_waterman::MatcherWeights {
         gap_penalty : -5,
         pattern_skip_penalty : -10,
         first_letter_bonus : 3,
         match_bonus: 1
     };
-    let mut m = path_match::Matcher::from("anao", weights);
+    let mut m = smith_waterman::Matcher::from("anao", weights);
     for x in "ao".as_bytes() {
         m.add_pchar(*x);
     }
@@ -87,14 +87,14 @@ fn not_greedy() {
 
 #[test]
 fn word_boundary() {
-    let mut m = path_match::Matcher::from("ht ao", default_weights());
+    let mut m = smith_waterman::Matcher::from("ht ao", default_weights());
     m.add_pchar('a' as u8);
     assert_eq!(m.score(), 3 + 1);
 }
 
 #[test]
 fn remove_char() {
-    let mut m = path_match::Matcher::from("aoeu", default_weights());
+    let mut m = smith_waterman::Matcher::from("aoeu", default_weights());
     m.add_pchar('a' as u8);
     m.add_pchar('e' as u8);
     assert_eq!(m.score(), 3+1 + -5 + 1);

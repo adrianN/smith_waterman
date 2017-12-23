@@ -1,7 +1,6 @@
 [package]
-name = "path_match"
-version = "0.1.0"
+name = "smith_waterman"
+version = "0.2.0"
 authors = ["Adrian Neumann <adrian_neumann@gmx.de>"]
 
 [dependencies]
-rand = "*"

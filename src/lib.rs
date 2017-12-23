@@ -1,7 +1,6 @@
 #![allow(dead_code)]
-extern crate rand;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone)]
 struct TableEntry {
     match_count: isize,
     streak: isize,
@@ -10,15 +9,27 @@ struct TableEntry {
     word_boundary: isize,
 }
 
+/// For tuning the algorithm.
 pub struct MatcherWeights {
+    /// Penalty for leaving a gap. Makes the algorithm prefer matching consecutive characters
+    /// Unmatched prefix and suffix are free.
+    /// Default -5
     pub gap_penalty: isize,
+    /// Penalty for skipping a character of the pattern.
+    /// Default -10
     pub pattern_skip_penalty: isize,
+    /// Points for matching two characters
+    /// Default 1
     pub match_bonus: isize,
+    /// Points for matching a character after -, _, \, /, Space
+    /// This is additional to the points for matching
+    /// Default 3
     pub first_letter_bonus: isize,
 }
 const BOUNDARIES: [u8; 5] = [45, 95, 92, 47, 32];
 
 impl MatcherWeights {
+    /// Make a new MatcherWeight with the default weights.
     pub fn new() -> MatcherWeights {
         MatcherWeights {
             gap_penalty: -5,
@@ -40,6 +51,7 @@ impl TableEntry {
         }
     }
 
+    // boundary_match==True <-> previous character is a word boundary
     fn match_key(&self, boundary_match: bool) -> TableEntry {
         TableEntry {
             match_count: self.match_count + 1,
@@ -59,11 +71,14 @@ impl TableEntry {
     fn skip_text(&self) -> TableEntry {
         TableEntry {
             streak: 0,
+            // the unmatched prefix doesnt' contribute a gap because
+            // streak==0
             gaps: self.gaps + if self.streak != 0 { 1 } else { 0 },
             ..*self
         }
     }
 
+    // (Count*Weight for all scoring features, streak).
     fn get_score(&self, w: &MatcherWeights) -> (isize, isize) {
         (
             w.gap_penalty * self.gaps + w.pattern_skip_penalty * self.pattern_skip
@@ -106,6 +121,8 @@ impl Table {
     }
 }
 
+/// This keeps track of the matcher state
+/// It consumes memory proportional to text length * pattern length
 pub struct Matcher<'a> {
     text: &'a str,
     pattern_length: usize,
@@ -114,10 +131,12 @@ pub struct Matcher<'a> {
 }
 
 impl<'a> Matcher<'a> {
+    /// Make an empty matcher with default weights
     pub fn new(text: &'a str) -> Matcher<'a> {
         Matcher::from(text, MatcherWeights::new())
     }
 
+    /// Make an empty matcher with custom weights
     pub fn from(text: &'a str, weights: MatcherWeights) -> Matcher<'a> {
         Matcher {
             text: text,
@@ -127,12 +146,16 @@ impl<'a> Matcher<'a> {
         }
     }
 
+    /// Add a pattern character
     pub fn add_pchar(&mut self, k: u8) {
         self.pattern_length += 1;
         let mut last_b: Option<&u8> = None;
         self.table.ensure_row();
         for (i, b) in self.text.as_bytes().into_iter().enumerate() {
             let i = i + 1;
+            // We could save some copies by changing the score function
+            // so that we don't have to create new structs to get the
+            // scores for skipping things.
             let pattern_skip = Some(self.table.get(self.pattern_length - 1, i).skip_pattern());
             let text_skip = if i >= 2 {
                 Some(self.table.get(self.pattern_length, i - 1).skip_text())
@@ -163,6 +186,7 @@ impl<'a> Matcher<'a> {
         }
     }
 
+    /// Remove the last pattern character
     pub fn remove_pchar(&mut self) {
         if self.pattern_length > 0 {
             self.pattern_length -= 1;
@@ -170,6 +194,7 @@ impl<'a> Matcher<'a> {
         }
     }
 
+    /// Score for current pattern
     pub fn score(&self) -> isize {
         let mut te = TableEntry {
             ..*self.table.get(self.pattern_length, self.text.len())
