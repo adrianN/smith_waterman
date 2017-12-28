@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct TableEntry {
     match_count: isize,
     streak: isize,
@@ -84,7 +84,7 @@ impl TableEntry {
             w.gap_penalty * self.gaps + w.pattern_skip_penalty * self.pattern_skip
                 + w.match_bonus * self.match_count
                 + w.first_letter_bonus * self.word_boundary,
-            self.streak,
+            if self.streak > 1 { self.streak } else { 0 },
         )
     }
 }
@@ -151,7 +151,8 @@ impl<'a> Matcher<'a> {
         self.pattern_length += 1;
         let mut last_b: Option<&u8> = None;
         self.table.ensure_row();
-        for (i, b) in self.text.as_bytes().into_iter().enumerate() {
+        let text_chars = self.text.as_bytes().into_iter().enumerate();
+        for (i, b) in text_chars {
             let i = i + 1;
             // We could save some copies by changing the score function
             // so that we don't have to create new structs to get the
@@ -163,7 +164,7 @@ impl<'a> Matcher<'a> {
                 None
             };
             let matching = if k == *b {
-                let boundary_match = i == self.text.len() || match last_b {
+                let boundary_match = match last_b {
                     Some(x) => BOUNDARIES.into_iter().any(|y| *x == *y),
                     None => true,
                 };
@@ -175,10 +176,10 @@ impl<'a> Matcher<'a> {
             } else {
                 None
             };
-            let r: TableEntry = pattern_skip
+            let r: TableEntry = matching
                 .into_iter()
                 .chain(text_skip)
-                .chain(matching)
+                .chain(pattern_skip)
                 .max_by_key(|x| x.get_score(&self.weights))
                 .unwrap();
             self.table.add(r);

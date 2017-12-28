@@ -9,6 +9,24 @@ fn default_weights() -> smith_waterman::MatcherWeights {
 }
 
 #[test]
+fn elendiges_mp4() {
+    {
+    let mut m = smith_waterman::Matcher::from("great_teacher_onizuka/episode14.mp4", default_weights());
+    for b in "onizuka14".as_bytes() {
+        m.add_pchar(*b);
+    }
+    assert_eq!(m.score(), 7+3-5+1+1);
+    }
+    {
+    let mut m = smith_waterman::Matcher::from("great_teacher_onizuka/episode10.mp4", default_weights());
+    for b in "onizuka14".as_bytes() {
+        m.add_pchar(*b);
+    }
+    assert_eq!(m.score(), 7+3-5+1+1-5);
+    }
+}
+
+#[test]
 fn it_works() {
     let m = smith_waterman::Matcher::from("aoeu", default_weights());
     assert_eq!(m.score(), 0);
@@ -24,7 +42,7 @@ fn matching() {
         if i == 0  {
             assert_eq!(m.score(), 1 + 3);
         } else if  i == 3 {
-            assert_eq!(m.score(), 1 + 3);
+            assert_eq!(m.score(), 1 + 0);
         } else {
             assert_eq!(m.score(), 1);
         }
@@ -39,7 +57,7 @@ fn matching2chars() {
         for j in i + 1..bts.len() {
             let first_skip = if (j - i) > 1 { 1 } else { 0 };
             let start = if i==0 { 3 } else {0 };
-            let end = if j==3 { 3 } else {0 };
+            let end = if j==3 { 0 } else {0 };
 
             let mut m = smith_waterman::Matcher::from("aoeu", default_weights());
             println!("*** add {}", bts[i] as char);
@@ -82,7 +100,7 @@ fn not_greedy() {
     for x in "ao".as_bytes() {
         m.add_pchar(*x);
     }
-    assert_eq!(m.score(), 2 + 3);
+    assert_eq!(m.score(), 2 + 0);
 }
 
 #[test]
