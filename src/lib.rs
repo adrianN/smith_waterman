@@ -10,6 +10,7 @@ struct TableEntry {
 }
 
 /// For tuning the algorithm.
+#[derive(Default)]
 pub struct MatcherWeights {
     /// Penalty for leaving a gap. Makes the algorithm prefer matching consecutive characters
     /// Unmatched prefix and suffix are free.
@@ -102,7 +103,7 @@ impl Table {
         }
     }
 
-    fn get<'a>(&'a self, p: usize, t: usize) -> &'a TableEntry {
+    fn get(&self, p: usize, t: usize) -> &TableEntry {
         &self.data[t + p * self.text_len]
     }
 
