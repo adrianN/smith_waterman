@@ -17,7 +17,10 @@ letters from the search string without having to recompute everything.
 Usage
 -----
 
-Documentation is TODO. Contact me if you want to use this and don't know how, e.g. by opening an issue.
+Run `cargo doc` to generate some documentation, or check the comments in the code. The tldr is that you create
+a `Matcher` struct and add pattern characters with `add_pchar`. You query the score with `score`.
+
+You can also check out [MovieThingy](https://github.com/adrianN/MovieThingy), the tool for which I use this.
 
 Licence
 -------
@@ -29,4 +32,4 @@ Contributing
 
 Feel free to open pull requests. Only contribute code to this project that won't get me in trouble, e.g. because 
 of patents, or because it's not your own creation that you're submitting, or your employer claims rights to everything
-your code.
+your code. Any code you contribute must be under the same license as this repository.

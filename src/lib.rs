@@ -1,4 +1,17 @@
 #![allow(dead_code)]
+#![deny(missing_docs)]
+
+//! This crate implements a version of the Smith Waterman algorithm for
+//! sequence alignment. It works on arrays of u8.
+//!
+//! The crate provides a `Matcher` struct that does the work and keeps track
+//! of the state. You provide a &str to create that struct and then you can
+//! add or remove pattern characters using the `add_pchar` and `remove_pchar`
+//! methods. You can query the score with the `score` function.
+//!
+//! To tune the behavior of the algorithm you can provide weights to change
+//! the bonuses and penalties for matching or not matching a character. 
+//! See the documentation of the `MatcherWeights` struct.
 
 #[derive(Clone, Debug)]
 struct TableEntry {
